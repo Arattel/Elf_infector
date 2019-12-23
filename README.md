@@ -35,3 +35,13 @@ chmod +x demonstration.sh
 ```
 
 Then file `out_file` will be infected instance of `ls`.
+
+## Later usage
+
+For ELF executable we have 2 options: general, where jump to entry point is just appended to the end of .text segment 
+of a virus and "perkele", which is a bit more complicated, because it's adapted to a my virus payload. 
+
+./infector [-h|-p] <infected_filename> <payload_filename> <output_filename> <br>
+Options: <br>
+-h --help     Show this screen. <br>
+-p     Payload path is a path to perkele virus.
