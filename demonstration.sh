@@ -2,7 +2,7 @@
 
 
 # Compiling executables 
-cmake -G\"Unix Makefiles\"
+cmake -G"Unix Makefiles"
 make
 
 # Compiling assembly payload
