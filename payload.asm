@@ -26,5 +26,5 @@ _start:
   jmp 0x1111111111111111
 
 align 8
-  msg     db 0x1b,'[31mThis is Perkele virus',0x1b,'[0m',0x0a,0
+  msg     db 0x1b,'[31m/╲/\╭( ͡° ͡° ͜ʖ ͡° ͡°)╮/\╱\',13,10,'T̗ʜɪ̘͌̚s̕͜ ͐̊ɪ͂s̔ ̒͢ᴘͅᴇ͈ͮʀ̋̃̀ᴋͧᴇ͂ʟᴇ̰͢ ̕ᴠ̨ɪ̾̊̒ʀ̓̎ᴜ̹̦̍s☑ ̫ ',0x1b,'[0m',0x0a,0
   msg_end db 0x0

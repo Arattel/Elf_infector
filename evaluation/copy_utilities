@@ -1,0 +1,5 @@
+#!/bin/bash
+
+mkdir binaries
+mkdir infected_binaries
+compgen -c |xargs -I{} which {}| xargs -I{} cp {} binaries/
