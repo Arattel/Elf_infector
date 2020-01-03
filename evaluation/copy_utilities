@@ -2,4 +2,4 @@
 
 mkdir binaries
 mkdir infected_binaries
-compgen -c |xargs -I{} which {}| xargs -I{} cp {} binaries/
+compgen -c |xargs -I{} which {}| grep '^/bin/'|xargs -I{} cp {} binaries/
