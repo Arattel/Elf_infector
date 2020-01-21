@@ -81,6 +81,11 @@ int main(int argc, char** argv){
         return -1;
     }
     Elf64_Ehdr* ehdr = (Elf64_Ehdr *) mem;
+
+
+    if(mem[0] != ELFMAG0 || mem[1] != ELFMAG1 || mem[2] != ELFMAG2 || mem[3] != ELFMAG3){
+        return -5;
+    }
     Elf64_Phdr* phdr = (Elf64_Phdr *) &mem[ehdr->e_phoff];
     Elf64_Shdr* shdr = (Elf64_Shdr *) &mem[ehdr->e_shoff];
     Elf32_Addr parasite_insertion_address, start_of_text, end_of_text, older_entry;
